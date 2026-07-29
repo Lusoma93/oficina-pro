@@ -241,17 +241,23 @@ export default function Facturacion() {
     }
   }
 
+  const [batchStatus, setBatchStatus] = useState("");
+
   // Enviar las facturas al endpoint local y actualizar Supabase
   async function procesarFacturacion() {
     setProcessing(true);
     setProcessResult(null);
+    setBatchStatus("");
 
     const selectedList = transacciones.filter(t => selectedTrans[t.id]);
     const results = [];
     let successCount = 0;
     let failCount = 0;
+    let itemIndex = 0;
+    const totalItems = selectedList.length;
 
     for (const t of selectedList) {
+      itemIndex++;
       const metodo = (t.metodo_pago || "").toLowerCase();
       const isFullBilling = metodo.includes("transferencia") || metodo.includes("sinpe");
 
@@ -267,6 +273,8 @@ export default function Facturacion() {
       // El nombre del cliente para crear la carpeta siempre es el del proyecto/cliente real
       const clienteNombre = t.clientes?.nombre || "Cliente General";
       
+      setBatchStatus(`Procesando factura ${itemIndex} de ${totalItems}: ${clienteNombre}...`);
+
       try {
         // 1. Llamar al Agente Local de automatización (Puppeteer)
         const res = await fetch("http://127.0.0.1:3001/automate", {
@@ -339,9 +347,16 @@ export default function Facturacion() {
           error: err.message
         });
       }
+
+      // Si hay más facturas en el lote, pausar 6 segundos para dar tiempo a Facel de estabilizar la sesión y descargar el PDF
+      if (itemIndex < totalItems) {
+        setBatchStatus(`Factura ${itemIndex} de ${totalItems} lista. Pausa de seguridad (6s) para estabilizar Facel...`);
+        await new Promise(r => setTimeout(r, 6000));
+      }
     }
 
     setProcessing(false);
+    setBatchStatus("");
     setProcessResult({
       successCount,
       failCount,
@@ -555,6 +570,19 @@ export default function Facturacion() {
               {processing ? "⏳ Procesando lote..." : "⚡ Hacer Facturas del Mes"}
             </button>
           </div>
+
+          {/* Banner de progreso en lote */}
+          {processing && (
+            <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid var(--primary)', padding: '1rem 1.25rem', borderRadius: 12, display: 'flex', alignItems: 'center', gap: '1rem', animation: 'pulse 2s infinite' }}>
+              <div style={{ fontSize: '1.8rem' }}>🤖</div>
+              <div>
+                <div style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '1rem' }}>Automatización Facel en Ejecución...</div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                  {batchStatus || "Iniciando comunicación con el agente local..."}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Reporte de último procesamiento */}
           {processResult && (

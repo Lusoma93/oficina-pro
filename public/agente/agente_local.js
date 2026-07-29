@@ -1,7 +1,17 @@
-import { NextResponse } from 'next/server';
-import puppeteer from 'puppeteer';
-import fs from 'fs';
-import path from 'path';
+
+const express = require('express');
+const cors = require('cors');
+const bodyParser = require('body-parser');
+require('dotenv').config();
+
+const app = express();
+app.use(cors());
+app.use(bodyParser.json());
+
+
+const puppeteer = require('puppeteer');
+const fs = require('fs');
+const path = require('path');
 
 // Helper local para mover y renombrar el PDF desde descargas a MEGA
 function fileLog(msg) {
@@ -100,7 +110,9 @@ async function movePdfToMega(downloadsPath, megaPath, clienteNombre, monto, fech
   throw new Error(`El PDF de la factura no se encontrÃ³ en la carpeta de descargas (${normalizedDownloads}).`);
 }
 
-export async function POST(request) {
+app.post('/automate', async (req, res) => {
+    const request = { json: async () => req.body };
+    const NextResponse = { json: (data, opts) => res.status(opts?.status || 200).json(data) };
   const requestStartTime = Date.now();
   let browser = null;
   let page = null;
@@ -127,11 +139,14 @@ export async function POST(request) {
     if (!facelUrl || !facelUser || !facelPass) {
       return NextResponse.json({ error: 'Faltan credenciales o URL de Facel.' }, { status: 400 });
     }
+    if (!megaPath || !downloadsPath) {
+      return NextResponse.json({ error: 'Faltan credenciales o URL de Facel.' }, { status: 400 });
+    }
 
     // ConfiguraciÃ³n de Puppeteer
     browser = await puppeteer.launch({
-      headless: false, // false para que puedas ver lo que hace el robot y corregir cualquier error visualmente
-      slowMo: 100,     // AÃ±adido para ralentizar las acciones y que funcione como un video en vivo
+      headless: 'new', // false para que puedas ver lo que hace el robot y corregir cualquier error visualmente
+      slowMo: 0,     // AÃ±adido para ralentizar las acciones y que funcione como un video en vivo
       defaultViewport: null,
       protocolTimeout: 180000, // Prevenir el error Network.enable timed out
       args: [
@@ -2009,8 +2024,30 @@ export async function POST(request) {
     }
     return NextResponse.json({ error: `Fallo en el robot: ${error.message} | Captura del error: http://localhost:3000/debug_error.png | Captura antes de registrar: http://localhost:3000/debug_step8_antes_registrar.png` }, { status: 500 });
   }
-}
+});
+app.post('/select-folder', (req, res) => {
+    try {
+        const { exec } = require('child_process');
+        const fs = require('fs');
+        const path = require('path');
+        const scriptPath = path.join(process.cwd(), 'selector.ps1');
+        const psCode = `Add-Type -AssemblyName System.Windows.Forms
+$f = New-Object System.Windows.Forms.FolderBrowserDialog
+$f.Description = "Seleccione la carpeta"
+$f.ShowNewFolderButton = $true
+if($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK){ Write-Output $f.SelectedPath }`;
+        fs.writeFileSync(scriptPath, psCode);
+        
+        exec('powershell -ExecutionPolicy Bypass -File "' + scriptPath + '"', (error, stdout, stderr) => {
+            try { fs.unlinkSync(scriptPath); } catch(e){}
+            if (error) {
+                return res.json({ error: error.message });
+            }
+            res.json({ path: stdout.trim() });
+        });
+    } catch (err) {
+        res.json({ error: err.message });
+    }
+});
 
-export async function GET() { 
-  return NextResponse.json({ message: 'La automatizacion esta encendida. Para crear una factura, por favor usa el boton Agregar en el Panel de Gestor Catastror.' }); 
-}
+app.listen(3001, () => console.log('Agente Local corriendo en puerto 3001. Listo para recibir facturas.'));
