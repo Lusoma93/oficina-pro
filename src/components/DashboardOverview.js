@@ -3,7 +3,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import styles from "@/app/page.module.css";
 
-const ESTADOS_PROYECTO = ["Catastro", "Disponibilidad de Agua", "Trámites Adicionales", "Municipalidad", "Apelación", "Mantenimiento de Mapa", "Catastro Final", "Finalizado"];
+const ESTADOS_PROYECTO = ["Catastro", "Disponibilidad de Agua", "Trámites Adicionales", "Municipalidad", "Apelación", "Mantenimiento de Mapa", "Catastro Final", "Finalizado", "Cancelación", "Desestimada"];
+const ESTADOS_INACTIVOS = ["Finalizado", "Cancelación", "Desestimada"];
 
 export default function DashboardOverview() {
   const [stats, setStats] = useState({
@@ -32,10 +33,12 @@ export default function DashboardOverview() {
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
     
     // 1. Proyectos Activos y Estancados
-    const { count: proyCount, data: activeProys } = await supabase
+    const { data: allProys } = await supabase
       .from('proyectos')
-      .select('id, nombre, created_at, estado, clientes(nombre)', { count: 'exact' })
-      .neq('estado', 'Finalizado');
+      .select('id, nombre, created_at, estado, clientes(nombre)');
+
+    const activeProys = (allProys || []).filter(p => !ESTADOS_INACTIVOS.includes(p.estado));
+    const proyCount = activeProys.length;
 
     const { data: allPres } = await supabase.from('presentaciones').select('proyecto_id, created_at');
     
@@ -271,8 +274,8 @@ export default function DashboardOverview() {
                     onChange={(e) => handleUpdateEstado(p.id, e.target.value)}
                     style={{ 
                       padding: '0.4rem 0.8rem', borderRadius: 8, fontSize: '0.8rem', fontWeight: 600, border: '1px solid var(--border)',
-                      background: p.estado === 'Finalizado' ? 'rgba(16, 185, 129, 0.1)' : 'var(--bg-sidebar)', 
-                      color: p.estado === 'Finalizado' ? 'var(--success)' : 'inherit',
+                      background: ESTADOS_INACTIVOS.includes(p.estado) ? 'rgba(16, 185, 129, 0.1)' : 'var(--bg-sidebar)', 
+                      color: ESTADOS_INACTIVOS.includes(p.estado) ? 'var(--success)' : 'inherit',
                       cursor: 'pointer'
                     }}
                   >

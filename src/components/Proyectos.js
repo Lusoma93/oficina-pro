@@ -5,7 +5,7 @@ import styles from "@/app/page.module.css";
 
 const SERVICIOS_INGENIERIA = ["Segregación (Venta/Donación)", "Reunión de Fincas", "Segregación y Reunión", "Finca Completa", "Información Posesoria", "Rectificación de Medida", "Levantamiento Topográfico (Relieve/Curvas)", "Deslinde y Amojonamiento", "Georreferenciación (Puntos Control)", "Urbanización / Condominio", "Catastro Municipal", "Trámite de Visado", "Nivelación de Precisión"];
 const SERVICIOS_VALUACION = ["Avalúo Inmueble (Casa/Lote)", "Avalúo de Finca / Agrícola", "Avalúo de Maquinaria y Equipo", "Peritaje Judicial", "Avalúo Bancario (Garantía)", "Valoración de Activos"];
-const ESTADOS_PRESENTACION = ["Catastro", "Disponibilidad de Agua", "Trámites Adicionales", "Municipalidad", "Apelación", "Mantenimiento de Mapa", "Catastro Final", "Finalizado"];
+const ESTADOS_PRESENTACION = ["Catastro", "Disponibilidad de Agua", "Trámites Adicionales", "Municipalidad", "Apelación", "Mantenimiento de Mapa", "Catastro Final", "Finalizado", "Cancelación", "Desestimada"];
 
 export default function Proyectos() {
   const [proyectos, setProyectos] = useState([]);
@@ -279,7 +279,8 @@ export default function Proyectos() {
 
   const calcularTotalConIVA = (costo, tieneIva) => tieneIva ? Number(costo) * 1.13 : Number(costo);
   
-  const necesitaActualizacion = (fecha) => {
+  const necesitaActualizacion = (fecha, estado) => {
+    if (["Finalizado", "Cancelación", "Desestimada"].includes(estado)) return false;
     const dias = (new Date() - new Date(fecha)) / (1000 * 60 * 60 * 24);
     return dias > 8;
   };
@@ -553,7 +554,7 @@ export default function Proyectos() {
                               {presentaciones[p.id]?.map(pres => (
                                 <div key={pres.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', border: '1px solid var(--border)', borderRadius: 8 }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                    {necesitaActualizacion(pres.created_at) && <span title="Más de 8 días sin actualizar" style={{ cursor: 'help' }}>⚠️</span>}
+                                    {necesitaActualizacion(pres.created_at, pres.estado) && <span title="Más de 8 días sin actualizar" style={{ cursor: 'help' }}>⚠️</span>}
                                     <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{pres.nombre}</span>
                                     {pres.area && <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', background: 'rgba(0,0,0,0.04)', padding: '0.1rem 0.4rem', borderRadius: 4 }}>📐 {Number(pres.area).toLocaleString()} m²</span>}
                                   </div>

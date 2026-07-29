@@ -18,12 +18,14 @@ export async function GET(request) {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // 3. Obtener Proyectos Activos y Presentaciones
-    const { data: activeProys, error: proyError } = await supabase
+    const { data: allProys, error: proyError } = await supabase
       .from('proyectos')
-      .select('id, nombre, created_at, estado, clientes(nombre)')
-      .neq('estado', 'Finalizado');
+      .select('id, nombre, created_at, estado, clientes(nombre)');
 
     if (proyError) throw new Error(proyError.message);
+
+    const ESTADOS_INACTIVOS = ["Finalizado", "Cancelación", "Desestimada"];
+    const activeProys = (allProys || []).filter(p => !ESTADOS_INACTIVOS.includes(p.estado));
 
     const { data: allPres, error: presError } = await supabase
       .from('presentaciones')
