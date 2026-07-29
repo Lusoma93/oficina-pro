@@ -40,6 +40,22 @@
   padding: 0;
 }
 
+html {
+  font-size: 13px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 14.5px;
+  }
+}
+
+@media (min-width: 1200px) {
+  html {
+    font-size: 16px;
+  }
+}
+
 html, body {
   height: 100%;
   background-color: var(--bg-main);

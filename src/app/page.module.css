@@ -104,11 +104,84 @@
   color: var(--text-main);
 }
 
+.mobileHeader {
+  display: none;
+}
+
+.sidebarOverlay {
+  display: none;
+}
+
 @media (max-width: 1024px) {
   .dashboard {
     grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
   }
   .sidebar {
-    display: none;
+
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--shadow-lg);
+    background: var(--bg-sidebar);
+    width: 280px;
+    max-width: 85vw;
+  }
+  .sidebarOpen {
+    transform: translateX(0) !important;
+  }
+  .sidebarOverlay {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    z-index: 999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  .sidebarOverlayOpen {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .main {
+    padding: 1rem;
+    overflow-x: hidden;
+  }
+  .mobileHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: var(--bg-card);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 998;
+    margin-bottom: 1rem;
+  }
+  .hamburger {
+    background: rgba(0,0,0,0.05);
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    color: var(--text-main);
+    padding: 0.5rem;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
   }
 }
