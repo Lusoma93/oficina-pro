@@ -513,27 +513,7 @@ export default function Proyectos() {
                 <React.Fragment key={p.id}>
                   <tr style={{ borderBottom: isExpanded ? 'none' : '1px solid var(--border)' }}>
                     <td style={{ padding: '1rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 700 }}>{p.nombre}</span>
-                        {diasStalled && (
-                          <span 
-                            title={`🚨 Alerta de Tramitología: ${diasStalled} días sin avances`} 
-                            style={{ 
-                              background: 'var(--danger)', 
-                              color: '#fff', 
-                              padding: '0.15rem 0.5rem', 
-                              borderRadius: 12, 
-                              fontSize: '0.7rem', 
-                              fontWeight: 800,
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.2rem'
-                            }}
-                          >
-                            🚨 {diasStalled}d sin avance
-                          </span>
-                        )}
-                      </div>
+                      <div style={{ fontWeight: 700 }}>{p.nombre}</div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Contrato: {p.numero_contrato || 'N/A'} • {p.tipo}</div>
                       {p.protocolos && p.folio && (
                         <div style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600, marginTop: '0.2rem' }}>
@@ -560,10 +540,31 @@ export default function Proyectos() {
                       </span>
                     </td>
                     <td style={{ padding: '1rem' }}>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                         <button onClick={() => { setEditingId(p.id); setNuevoProyecto(p); setShowModal(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' }}>✏️</button>
                         <button onClick={() => handleDelete(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' }}>🗑️</button>
                         <button onClick={() => { if (expandedProy === p.id) setExpandedProy(null); else { setExpandedProy(p.id); fetchPresentaciones(p.id); fetchGastosProyecto(p.id); } }} style={{ padding: '0.3rem 0.6rem', borderRadius: 6, border: '1px solid var(--primary)', background: isExpanded ? 'var(--primary)' : 'transparent', color: isExpanded ? 'white' : 'var(--primary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>{isExpanded ? 'Cerrar' : 'Detalles'}</button>
+                        {diasStalled && (
+                          <span 
+                            title={`🚨 Alerta de Tramitología: ${diasStalled} días sin avances`} 
+                            style={{ 
+                              background: 'rgba(239, 68, 68, 0.15)', 
+                              color: 'var(--danger)', 
+                              border: '1px solid var(--danger)',
+                              padding: '0.3rem 0.6rem', 
+                              borderRadius: 6, 
+                              fontSize: '0.8rem', 
+                              fontWeight: 700,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.2rem',
+                              cursor: 'help',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            🚨 {diasStalled}d
+                          </span>
+                        )}
                       </div>
                     </td>
                   </tr>
