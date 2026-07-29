@@ -23,8 +23,16 @@ async function movePdfToMega(downloadsPath, megaPath, clienteNombre, monto, fech
     fs.mkdirSync(periodoFolder, { recursive: true });
   }
 
-  // Buscar si ya existe una carpeta similar
-  const existingFolders = fs.readdirSync(periodoFolder, { withFileTypes: true })
+  const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const mesActual = meses[new Date().getMonth()];
+  const mesFolder = path.join(periodoFolder, mesActual);
+
+  if (!fs.existsSync(mesFolder)) {
+    fs.mkdirSync(mesFolder, { recursive: true });
+  }
+
+  // Buscar si ya existe una carpeta similar en el MES ACTUAL
+  const existingFolders = fs.readdirSync(mesFolder, { withFileTypes: true })
     .filter(dirent => dirent.isDirectory())
     .map(dirent => dirent.name);
     
@@ -41,19 +49,19 @@ async function movePdfToMega(downloadsPath, megaPath, clienteNombre, monto, fech
     }
   }
 
-  const targetFolder = path.join(periodoFolder, finalFolderName);
+  const targetFolder = path.join(mesFolder, finalFolderName);
 
   if (!fs.existsSync(targetFolder)) {
     fs.mkdirSync(targetFolder, { recursive: true });
   }
 
-  // Esperar a que el PDF aparezca en la carpeta de descargas (polling de hasta 30 segundos)
+  // Esperar a que el PDF aparezca en la carpeta de descargas (polling de hasta 60 segundos)
   console.log(`Buscando el PDF descargado en: ${normalizedDownloads}...`);
   let mostRecentPdf = null;
   const startTime = Date.now();
   const minFileTime = requestStartTime ? (requestStartTime - 5000) : (startTime - 180000);
   
-  while (Date.now() - startTime < 30000) {
+  while (Date.now() - startTime < 60000) {
     const files = fs.readdirSync(normalizedDownloads);
     const pdfFiles = files
       .filter(f => f.toLowerCase().endsWith('.pdf'))
@@ -1981,7 +1989,7 @@ export async function POST(request) {
       // throw new Error("No se encontró el botón para descargar/imprimir el PDF...");
     }
     
-    await new Promise(r => setTimeout(r, 5000));
+    await new Promise(r => setTimeout(r, 12000));
 
     // PASO 17: ORGANIZAR PDF
     const actionResult = await movePdfToMega(downloadsPath, megaPath, clienteNombre, monto, fecha, requestStartTime);

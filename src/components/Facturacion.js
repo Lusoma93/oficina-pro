@@ -348,10 +348,10 @@ export default function Facturacion() {
         });
       }
 
-      // Si hay más facturas en el lote, pausar 6 segundos para dar tiempo a Facel de estabilizar la sesión y descargar el PDF
+      // Si hay más facturas en el lote, pausar 10 segundos para dar tiempo a Facel de estabilizar la sesión y descargar el PDF
       if (itemIndex < totalItems) {
-        setBatchStatus(`Factura ${itemIndex} de ${totalItems} lista. Pausa de seguridad (6s) para estabilizar Facel...`);
-        await new Promise(r => setTimeout(r, 6000));
+        setBatchStatus(`Factura ${itemIndex} de ${totalItems} lista. Pausa de seguridad (10s) para estabilizar Facel...`);
+        await new Promise(r => setTimeout(r, 10000));
       }
     }
 

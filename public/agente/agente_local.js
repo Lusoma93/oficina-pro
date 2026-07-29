@@ -33,8 +33,16 @@ async function movePdfToMega(downloadsPath, megaPath, clienteNombre, monto, fech
     fs.mkdirSync(periodoFolder, { recursive: true });
   }
 
-  // Buscar si ya existe una carpeta similar
-  const existingFolders = fs.readdirSync(periodoFolder, { withFileTypes: true })
+  const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const mesActual = meses[new Date().getMonth()];
+  const mesFolder = path.join(periodoFolder, mesActual);
+
+  if (!fs.existsSync(mesFolder)) {
+    fs.mkdirSync(mesFolder, { recursive: true });
+  }
+
+  // Buscar si ya existe una carpeta similar en el MES ACTUAL
+  const existingFolders = fs.readdirSync(mesFolder, { withFileTypes: true })
     .filter(dirent => dirent.isDirectory())
     .map(dirent => dirent.name);
     
@@ -51,19 +59,19 @@ async function movePdfToMega(downloadsPath, megaPath, clienteNombre, monto, fech
     }
   }
 
-  const targetFolder = path.join(periodoFolder, finalFolderName);
+  const targetFolder = path.join(mesFolder, finalFolderName);
 
   if (!fs.existsSync(targetFolder)) {
     fs.mkdirSync(targetFolder, { recursive: true });
   }
 
-  // Esperar a que el PDF aparezca en la carpeta de descargas (polling de hasta 30 segundos)
+  // Esperar a que el PDF aparezca en la carpeta de descargas (polling de hasta 60 segundos)
   console.log(`Buscando el PDF descargado en: ${normalizedDownloads}...`);
   let mostRecentPdf = null;
   const startTime = Date.now();
   const minFileTime = requestStartTime ? (requestStartTime - 5000) : (startTime - 180000);
   
-  while (Date.now() - startTime < 30000) {
+  while (Date.now() - startTime < 60000) {
     const files = fs.readdirSync(normalizedDownloads);
     const pdfFiles = files
       .filter(f => f.toLowerCase().endsWith('.pdf'))
@@ -145,8 +153,8 @@ app.post('/automate', async (req, res) => {
 
     // ConfiguraciÃ³n de Puppeteer
     browser = await puppeteer.launch({
-      headless: 'new', // false para que puedas ver lo que hace el robot y corregir cualquier error visualmente
-      slowMo: 0,     // AÃ±adido para ralentizar las acciones y que funcione como un video en vivo
+      headless: false, // false para que puedas ver lo que hace el robot y corregir cualquier error visualmente
+      slowMo: 50,     // AÃ±adido para ralentizar las acciones y que funcione como un video en vivo
       defaultViewport: null,
       protocolTimeout: 180000, // Prevenir el error Network.enable timed out
       args: [
@@ -213,7 +221,7 @@ app.post('/automate', async (req, res) => {
     }
     
     if (!loginReady) {
-      await page.screenshot({ path: path.join(process.cwd(), 'public', 'debug_login_timeout.png') });
+      await page.screenshot({ path: path.join(__dirname, 'debug_login_timeout.png') });
       throw new Error("Timeout: El formulario de login nunca apareciÃ³. Â¿Facel estÃ¡ caÃ­do?");
     }
 
@@ -264,7 +272,7 @@ app.post('/automate', async (req, res) => {
       const isElement = await page.evaluate(el => el instanceof HTMLElement, btnHandle);
       
       if (!isElement) {
-        await page.screenshot({ path: path.join(process.cwd(), 'public', 'debug_login.png') });
+        await page.screenshot({ path: path.join(__dirname, 'debug_login.png') });
         throw new Error("No se encontrÃ³ un botÃ³n visible de inicio de sesiÃ³n. Revisar debug_login.png");
       }
       
@@ -346,7 +354,7 @@ app.post('/automate', async (req, res) => {
 
     await new Promise(r => setTimeout(r, 2000)); // Extra para hidrataciÃ³n de Vue
     try {
-      await page.screenshot({ path: path.join(process.cwd(), 'public', 'debug_step1_login.png') });
+      await page.screenshot({ path: path.join(__dirname, 'debug_step1_login.png') });
       console.log('Captura Paso 1 (Login exitoso) guardada.');
     } catch (e) {
       console.log('No se pudo tomar la captura Paso 1:', e.message);
@@ -441,7 +449,7 @@ app.post('/automate', async (req, res) => {
     }
     
     try {
-      await page.screenshot({ path: path.join(process.cwd(), 'public', 'debug_step2_facturas.png') });
+      await page.screenshot({ path: path.join(__dirname, 'debug_step2_facturas.png') });
       console.log('Captura Paso 2 (Listado de facturas cargado) guardada.');
     } catch (e) {
       console.log('No se pudo tomar la captura Paso 2:', e.message);
@@ -590,12 +598,12 @@ app.post('/automate', async (req, res) => {
     }
     
     if (!clientSectionFound) {
-      await page.screenshot({ path: path.join(process.cwd(), 'public', 'debug_cedula.png') });
+      await page.screenshot({ path: path.join(__dirname, 'debug_cedula.png') });
       throw new Error("No se cargÃ³ la secciÃ³n de cliente en el formulario de Nueva Factura");
     }
 
     try {
-      await page.screenshot({ path: path.join(process.cwd(), 'public', 'debug_step3_agregar.png') });
+      await page.screenshot({ path: path.join(__dirname, 'debug_step3_agregar.png') });
       console.log('Captura Paso 3 (Formulario Nueva Factura cargado) guardada.');
     } catch (e) {
       console.log('No se pudo tomar la captura Paso 3:', e.message);
@@ -658,7 +666,7 @@ app.post('/automate', async (req, res) => {
       let formularioAbierto = false;
       for (let intento = 0; intento < 5; intento++) {
         try {
-          await page.screenshot({ path: path.join(process.cwd(), 'public', 'debug_agregar.png') });
+          await page.screenshot({ path: path.join(__dirname, 'debug_agregar.png') });
           cedInputHandle = await page.evaluateHandle(() => {
             // OpciÃ³n A: Input con placeholder de identificaciÃ³n
             let input = document.querySelector('#detalleCliente input[placeholder*="identifi"]');
@@ -684,7 +692,7 @@ app.post('/automate', async (req, res) => {
       }
 
       if (!formularioAbierto) {
-        await page.screenshot({ path: path.join(process.cwd(), 'public', 'debug_cedula.png') });
+        await page.screenshot({ path: path.join(__dirname, 'debug_cedula.png') });
         throw new Error("No se pudo enfocar el campo de texto de CÃ©dula de IdentificaciÃ³n");
       }
 
@@ -847,7 +855,7 @@ app.post('/automate', async (req, res) => {
     }, telefono, correo);
 
     try {
-      await page.screenshot({ path: path.join(process.cwd(), 'public', 'debug_step4_cliente_llenado.png') });
+      await page.screenshot({ path: path.join(__dirname, 'debug_step4_cliente_llenado.png') });
       console.log('Captura Paso 4 (Detalle de cliente llenado) guardada.');
     } catch (e) {
       console.log('No se pudo tomar la captura Paso 4:', e.message);
@@ -1443,14 +1451,14 @@ app.post('/automate', async (req, res) => {
     await new Promise(r => setTimeout(r, 2500));
 
     try {
-      await page.screenshot({ path: path.join(process.cwd(), 'public', 'debug_step5_producto_llenado.png') });
+      await page.screenshot({ path: path.join(__dirname, 'debug_step5_producto_llenado.png') });
       console.log('Captura Paso 5 (Detalle de producto llenado) guardada.');
     } catch (e) {
       console.log('No se pudo tomar la captura Paso 5:', e.message);
     }
 
     try {
-      await page.screenshot({ path: path.join(process.cwd(), 'public', 'debug_step6_agregar_linea.png') });
+      await page.screenshot({ path: path.join(__dirname, 'debug_step6_agregar_linea.png') });
       console.log('Captura Paso 6 (LÃ­nea agregada) guardada.');
     } catch (e) {
       console.log('No se pudo tomar la captura Paso 6:', e.message);
@@ -1497,7 +1505,7 @@ app.post('/automate', async (req, res) => {
 
     await new Promise(r => setTimeout(r, 1000));
     try {
-      await page.screenshot({ path: path.join(process.cwd(), 'public', 'debug_step7_notas_observaciones.png') });
+      await page.screenshot({ path: path.join(__dirname, 'debug_step7_notas_observaciones.png') });
       console.log('Captura Paso 7 (Notas llenadas) guardada.');
     } catch (e) {
       console.log('No se pudo tomar la captura Paso 7:', e.message);
@@ -1505,7 +1513,7 @@ app.post('/automate', async (req, res) => {
 
     // PASO 13, 14, 15: REGISTRAR DOCUMENTO Y CONFIRMAR ALERTAS
     try {
-      await page.screenshot({ path: path.join(process.cwd(), 'public', 'debug_step8_antes_registrar.png') });
+      await page.screenshot({ path: path.join(__dirname, 'debug_step8_antes_registrar.png') });
       console.log('Captura Paso 8 (Antes de registrar) guardada.');
     } catch (e) {
       console.log('No se pudo tomar la captura Paso 8:', e.message);
@@ -1629,7 +1637,7 @@ app.post('/automate', async (req, res) => {
     
     await new Promise(r => setTimeout(r, 2000));
     try {
-      await page.screenshot({ path: path.join(process.cwd(), 'public', 'debug_step9_despues_registrar.png') });
+      await page.screenshot({ path: path.join(__dirname, 'debug_step9_despues_registrar.png') });
       console.log('Captura Paso 9 (DespuÃ©s de registrar) guardada.');
     } catch (e) {
       console.log('No se pudo tomar la captura Paso 9:', e.message);
@@ -1740,11 +1748,11 @@ app.post('/automate', async (req, res) => {
         const fs = require('fs');
         const path = require('path');
         try {
-          fs.writeFileSync(path.join(process.cwd(), 'public', `debug_modal_text_${i + 1}.txt`), clickedPrompt.text, 'utf8');
+          fs.writeFileSync(path.join(__dirname, `debug_modal_text_${i + 1}.txt`), clickedPrompt.text, 'utf8');
         } catch (err) {}
         
         try {
-          await page.screenshot({ path: path.join(process.cwd(), 'public', `debug_step10_antes_confirmar_${i + 1}.png`) });
+          await page.screenshot({ path: path.join(__dirname, `debug_step10_antes_confirmar_${i + 1}.png`) });
           console.log(`Captura Paso 10 (Antes de confirmar ${i + 1}) guardada.`);
         } catch (screenshotErr) {
           console.log('No se pudo tomar la captura de confirmaciÃ³n:', screenshotErr.message);
@@ -1788,7 +1796,7 @@ app.post('/automate', async (req, res) => {
     console.log('Esperando botÃ³n de descarga del PDF...');
     
     try {
-      await page.screenshot({ path: path.join(process.cwd(), 'public', 'debug_step11_pagina_descarga.png') });
+      await page.screenshot({ path: path.join(__dirname, 'debug_step11_pagina_descarga.png') });
       console.log('Captura Paso 11 (PÃ¡gina de descarga) guardada.');
     } catch (e) {
       console.log('No se pudo tomar la captura Paso 11:', e.message);
@@ -1834,7 +1842,7 @@ app.post('/automate', async (req, res) => {
         await new Promise(r => setTimeout(r, 4000)); // Esperar a que recargue la lista
         
         try {
-          await page.screenshot({ path: path.join(process.cwd(), 'public', 'debug_step11_historial_refrescado.png') });
+          await page.screenshot({ path: path.join(__dirname, 'debug_step11_historial_refrescado.png') });
           console.log('Captura Paso 11 (Historial refrescado) guardada.');
         } catch (e) {
           console.log('No se pudo tomar la captura del historial refrescado:', e.message);
@@ -1860,7 +1868,7 @@ app.post('/automate', async (req, res) => {
           console.log('Se hizo clic en la factura mÃ¡s reciente para abrir el detalle.');
           await new Promise(r => setTimeout(r, 5000)); // Esperar que cargue el detalle de la factura
           try {
-            await page.screenshot({ path: path.join(process.cwd(), 'public', 'debug_step11_factura_abierta.png') });
+            await page.screenshot({ path: path.join(__dirname, 'debug_step11_factura_abierta.png') });
             console.log('Captura Paso 11 (Factura abierta) guardada.');
           } catch (e) {
             console.log('No se pudo tomar la captura de la factura abierta:', e.message);
@@ -1874,7 +1882,7 @@ app.post('/automate', async (req, res) => {
       
       // Tomar captura antes de hacer click en PDF para ver si estÃ¡ el botÃ³n
       try {
-        await page.screenshot({ path: path.join(process.cwd(), 'public', 'debug_step12_antes_click_pdf.png') });
+        await page.screenshot({ path: path.join(__dirname, 'debug_step12_antes_click_pdf.png') });
         console.log('Captura Paso 12 (Antes de hacer click en PDF) guardada.');
       } catch (e) {
         console.log('No se pudo tomar la captura Paso 12:', e.message);
@@ -1883,7 +1891,7 @@ app.post('/automate', async (req, res) => {
       // Guardar el HTML de la pÃ¡gina de descarga para depurar
       try {
         const htmlContent = await page.content();
-        fs.writeFileSync(path.join(process.cwd(), 'public', 'debug_html_download.txt'), htmlContent, 'utf8');
+        fs.writeFileSync(path.join(__dirname, 'debug_html_download.txt'), htmlContent, 'utf8');
         console.log('HTML de la pÃ¡gina de descarga guardado en public/debug_html_download.txt');
       } catch (htmlErr) {
         console.log('No se pudo guardar el HTML de descarga:', htmlErr.message);
@@ -1980,7 +1988,7 @@ app.post('/automate', async (req, res) => {
         console.log('Se clickeÃ³ el botÃ³n de descarga del PDF.');
         await new Promise(r => setTimeout(r, 2000));
         try {
-          await page.screenshot({ path: path.join(process.cwd(), 'public', 'debug_step13_despues_click_pdf.png') });
+          await page.screenshot({ path: path.join(__dirname, 'debug_step13_despues_click_pdf.png') });
           console.log('Captura Paso 13 (DespuÃ©s de hacer click en PDF) guardada.');
         } catch (e) {
           console.log('No se pudo tomar la captura Paso 13:', e.message);
@@ -1996,7 +2004,7 @@ app.post('/automate', async (req, res) => {
       // throw new Error("No se encontró el botón para descargar/imprimir el PDF...");
     }
     
-    await new Promise(r => setTimeout(r, 5000));
+    await new Promise(r => setTimeout(r, 12000));
 
     // PASO 17: ORGANIZAR PDF
     const actionResult = await movePdfToMega(downloadsPath, megaPath, clienteNombre, monto, fecha, requestStartTime);
@@ -2014,7 +2022,7 @@ app.post('/automate', async (req, res) => {
     console.error('Error en la automatizaciÃ³n:', error);
     if (browser) {
       try {
-        const debugPath = path.join(process.cwd(), 'public', 'debug_error.png');
+        const debugPath = path.join(__dirname, 'debug_error.png');
         await page.screenshot({ path: debugPath });
         console.log('Captura de error final guardada en:', debugPath);
       } catch (screenshotErr) {
