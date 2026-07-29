@@ -18,6 +18,7 @@ export default function DashboardOverview() {
   const [activeTomo, setActiveTomo] = useState(null);
   const [ultimoFolio, setUltimoFolio] = useState(null);
   const [protocolos, setProtocolos] = useState([]);
+  const [estancados, setEstancados] = useState([]);
 
   useEffect(() => {
     fetchStats();
@@ -30,11 +31,31 @@ export default function DashboardOverview() {
     // YYYY-MM-01 format (current month)
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
     
-    // 1. Proyectos Activos
-    const { count: proyCount } = await supabase
+    // 1. Proyectos Activos y Estancados
+    const { count: proyCount, data: activeProys } = await supabase
       .from('proyectos')
-      .select('*', { count: 'exact', head: true })
+      .select('id, nombre, created_at, estado, clientes(nombre)', { count: 'exact' })
       .neq('estado', 'Finalizado');
+
+    const { data: allPres } = await supabase.from('presentaciones').select('proyecto_id, created_at');
+    
+    const stalled = [];
+    const nowTs = Date.now();
+    (activeProys || []).forEach(p => {
+      const pPres = (allPres || []).filter(pr => pr.proyecto_id === p.id);
+      let latestTs = new Date(p.created_at).getTime();
+      pPres.forEach(pr => {
+        const ts = new Date(pr.created_at).getTime();
+        if (ts > latestTs) latestTs = ts;
+      });
+      
+      const diffDays = Math.floor((nowTs - latestTs) / (1000 * 60 * 60 * 24));
+      if (diffDays >= 8) {
+        stalled.push({ ...p, diasEstancado: diffDays });
+      }
+    });
+    stalled.sort((a,b) => b.diasEstancado - a.diasEstancado);
+    setEstancados(stalled);
 
     // 2. Pendientes de Firma (usando el nuevo campo 'firmado')
     const { count: firmaCount, data: dataSinFirmar } = await supabase
@@ -199,6 +220,35 @@ export default function DashboardOverview() {
           <span className={styles.statValue} style={{ color: 'var(--danger)' }}>₡{stats.gastosMes.toLocaleString()}</span>
         </div>
       </section>
+
+      {/* Alertas de Proyectos Estancados */}
+      {estancados.length > 0 && (
+        <section style={{ marginBottom: '1.5rem' }}>
+          <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--danger)', borderRadius: 12, padding: '1.25rem' }}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+              🚨 Alertas de Tramitología (Estancados {'>'} 8 días)
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {estancados.slice(0, 5).map(p => (
+                <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', padding: '0.75rem 1rem', borderRadius: 8, borderLeft: '4px solid var(--danger)' }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{p.nombre}</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{p.clientes?.nombre} • Estado actual: {p.estado}</div>
+                  </div>
+                  <div style={{ background: 'var(--danger)', color: '#fff', padding: '0.2rem 0.6rem', borderRadius: 20, fontSize: '0.75rem', fontWeight: 700 }}>
+                    {p.diasEstancado} días sin avance
+                  </div>
+                </div>
+              ))}
+              {estancados.length > 5 && (
+                <div style={{ fontSize: '0.85rem', color: 'var(--danger)', fontWeight: 600, textAlign: 'center', marginTop: '0.5rem' }}>
+                  + {estancados.length - 5} proyectos más requieren atención
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Content Section */}
       <div className={styles.contentGrid}>
