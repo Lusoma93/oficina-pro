@@ -53,6 +53,15 @@ export default function Proyectos() {
     const { data: proyData } = await supabase.from('proyectos').select('*, clientes(nombre, telefono), protocolos(nombre)').order('created_at', { ascending: false });
     const { data: clieData } = await supabase.from('clientes').select('id, nombre').order('nombre', { ascending: true });
     const { data: protData } = await supabase.from('protocolos').select('id, nombre').eq('activo', true).order('nombre', { ascending: true });
+    const { data: presData } = await supabase.from('presentaciones').select('*').order('created_at', { ascending: true });
+
+    const presMap = {};
+    (presData || []).forEach(pr => {
+      if (!presMap[pr.proyecto_id]) presMap[pr.proyecto_id] = [];
+      presMap[pr.proyecto_id].push(pr);
+    });
+
+    setPresentaciones(presMap);
     setProyectos(proyData || []);
     setClientes(clieData || []);
     setProtocolosActivos(protData || []);
@@ -285,6 +294,25 @@ export default function Proyectos() {
     return dias > 8;
   };
 
+  const ESTADOS_INACTIVOS = ["Finalizado", "Cancelación", "Desestimada"];
+
+  const esProyectoEstancado = (p, pPresentaciones) => {
+    if (ESTADOS_INACTIVOS.includes(p.estado)) return false;
+    const pPres = pPresentaciones || [];
+    const activePres = pPres.filter(pr => !ESTADOS_INACTIVOS.includes(pr.estado));
+    
+    if (pPres.length > 0 && activePres.length === 0) return false;
+    
+    let latestTs = new Date(p.created_at).getTime();
+    activePres.forEach(pr => {
+      const ts = new Date(pr.created_at).getTime();
+      if (ts > latestTs) latestTs = ts;
+    });
+    
+    const diffDays = Math.floor((Date.now() - latestTs) / (1000 * 60 * 60 * 24));
+    return diffDays >= 8 ? diffDays : false;
+  };
+
   const proyectosFiltrados = proyectos.filter(p => {
     if (!searchTerm) return true;
     const clieName = p.clientes?.nombre?.toLowerCase() || "";
@@ -479,12 +507,33 @@ export default function Proyectos() {
               const total = calcularTotalConIVA(p.costo || 0, p.tiene_iva);
               const saldo = Math.max(0, total - Number(p.adelanto || 0));
               const isExpanded = expandedProy === p.id;
+              const diasStalled = esProyectoEstancado(p, presentaciones[p.id]);
               
               return (
                 <React.Fragment key={p.id}>
                   <tr style={{ borderBottom: isExpanded ? 'none' : '1px solid var(--border)' }}>
                     <td style={{ padding: '1rem' }}>
-                      <div style={{ fontWeight: 700 }}>{p.nombre}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 700 }}>{p.nombre}</span>
+                        {diasStalled && (
+                          <span 
+                            title={`🚨 Alerta de Tramitología: ${diasStalled} días sin avances`} 
+                            style={{ 
+                              background: 'var(--danger)', 
+                              color: '#fff', 
+                              padding: '0.15rem 0.5rem', 
+                              borderRadius: 12, 
+                              fontSize: '0.7rem', 
+                              fontWeight: 800,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.2rem'
+                            }}
+                          >
+                            🚨 {diasStalled}d sin avance
+                          </span>
+                        )}
+                      </div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Contrato: {p.numero_contrato || 'N/A'} • {p.tipo}</div>
                       {p.protocolos && p.folio && (
                         <div style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600, marginTop: '0.2rem' }}>
