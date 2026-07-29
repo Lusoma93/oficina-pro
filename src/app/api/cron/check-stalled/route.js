@@ -29,7 +29,7 @@ export async function GET(request) {
 
     const { data: allPres, error: presError } = await supabase
       .from('presentaciones')
-      .select('proyecto_id, created_at');
+      .select('proyecto_id, estado, created_at');
 
     if (presError) throw new Error(presError.message);
 
@@ -38,8 +38,15 @@ export async function GET(request) {
     const nowTs = Date.now();
     (activeProys || []).forEach(p => {
       const pPres = (allPres || []).filter(pr => pr.proyecto_id === p.id);
+      const activePres = pPres.filter(pr => !ESTADOS_INACTIVOS.includes(pr.estado));
+
+      // Si el proyecto tiene trámites y todos sus trámites están en estado inactivo, omitir el proyecto
+      if (pPres.length > 0 && activePres.length === 0) {
+        return;
+      }
+
       let latestTs = new Date(p.created_at).getTime();
-      pPres.forEach(pr => {
+      activePres.forEach(pr => {
         const ts = new Date(pr.created_at).getTime();
         if (ts > latestTs) latestTs = ts;
       });

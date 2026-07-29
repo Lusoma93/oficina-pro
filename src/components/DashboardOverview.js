@@ -40,14 +40,23 @@ export default function DashboardOverview() {
     const activeProys = (allProys || []).filter(p => !ESTADOS_INACTIVOS.includes(p.estado));
     const proyCount = activeProys.length;
 
-    const { data: allPres } = await supabase.from('presentaciones').select('proyecto_id, created_at');
+    const { data: allPres } = await supabase.from('presentaciones').select('proyecto_id, estado, created_at');
     
     const stalled = [];
     const nowTs = Date.now();
     (activeProys || []).forEach(p => {
+      if (ESTADOS_INACTIVOS.includes(p.estado)) return;
+
       const pPres = (allPres || []).filter(pr => pr.proyecto_id === p.id);
+      const activePres = pPres.filter(pr => !ESTADOS_INACTIVOS.includes(pr.estado));
+      
+      // Si el proyecto tiene trámites y TODOS están en estado inactivo (Finalizado, Cancelación, Desestimada), NO es un proyecto estancado
+      if (pPres.length > 0 && activePres.length === 0) {
+        return;
+      }
+
       let latestTs = new Date(p.created_at).getTime();
-      pPres.forEach(pr => {
+      activePres.forEach(pr => {
         const ts = new Date(pr.created_at).getTime();
         if (ts > latestTs) latestTs = ts;
       });
